@@ -9,6 +9,9 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 }
+#include <poppler/cpp/poppler-document.h>
+#include <poppler/cpp/poppler-page.h>
+#include <Magick++.h>
 
 class FileConverter {
 public:
@@ -25,6 +28,12 @@ private:
     bool transcodeWithFFmpeg(const std::string& input, const std::string& output, 
                              const std::string& format, std::string& errorMsg, 
                              std::function<void(int)> progressCallback);
+    bool convertPDF(const std::string& input, const std::string& output, 
+                    const std::string& format, std::string& errorMsg, 
+                    std::function<void(int)> progressCallback);
+    bool convertImage(const std::string& input, const std::string& output, 
+                      const std::string& format, std::string& errorMsg, 
+                      std::function<void(int)> progressCallback);
 };
 
 #endif

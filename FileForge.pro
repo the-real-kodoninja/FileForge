@@ -12,4 +12,4 @@ HEADERS += include/FileForgeWindow.hpp \
            include/ConversionThread.hpp
 
 INCLUDEPATH += include
-LIBS += -larchive -lavcodec -lavformat -lavutil
+LIBS += -larchive -lavcodec -lavformat -lavutil -lpoppler-cpp -lMagick++-6.Q16HDRI

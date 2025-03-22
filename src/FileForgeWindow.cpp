@@ -13,6 +13,8 @@ FileForgeWindow::~FileForgeWindow() {
 }
 
 void FileForgeWindow::setupUI() {
+    formatCombo->addItems({" .txt", ".zip", ".tar.gz", ".pdf", ".png", ".jpg", ".svg", 
+                           ".mp3", ".mp4", ".avi", ".mkv", ".flv"});
     setWindowTitle("FileForge");
     setFixedSize(400, 150);
     setStyleSheet(
