@@ -1,4 +1,3 @@
-// FileForgeWindow.hpp
 #ifndef FILEFORGEWINDOW_HPP
 #define FILEFORGEWINDOW_HPP
 
@@ -13,9 +12,10 @@ public:
     ~FileForgeWindow();
 
 private:
-    QLabel *inputFileLabel, *fileInfoLabel, *statusLabel;
-    QComboBox *outputFormatCombo, *compressionLevelCombo;
-    QPushButton *inputFileButton, *outputDirButton, *convertButton;
+    QLabel *statusLabel;
+    QPushButton *inputButton, *convertButton, *cancelButton;
+    QComboBox *formatCombo;
+    QProgressBar *progressBar;
     QString inputFilePath, outputDirPath;
     ConversionThread *conversionThread;
 
@@ -23,9 +23,10 @@ private:
 
 private slots:
     void selectInputFile();
-    void selectOutputDir();
     void startConversion();
-    void onConversionFinished(bool success, uint64_t newSize);
+    void cancelConversion();
+    void onConversionFinished(bool success, uint64_t newSize, const QString& errorMsg);
+    void onProgressUpdated(int value);
 };
 
 #endif

@@ -1,4 +1,3 @@
-// FileForgeWindow.cpp
 #include "FileForgeWindow.hpp"
 #include "ConversionThread.hpp"
 #include <filesystem>
@@ -15,88 +14,104 @@ FileForgeWindow::~FileForgeWindow() {
 
 void FileForgeWindow::setupUI() {
     setWindowTitle("FileForge");
-    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    setFixedSize(400, 150);
+    setStyleSheet(
+        "QWidget { background-color: #2E2E2E; color: #D4A017; }" // Dark gray bg, earthy yellow text
+        "QPushButton { background-color: #4A4A4A; border: none; padding: 5px; color: #E8DAB2; }" // Medium gray buttons
+        "QPushButton:hover { background-color: #5A5A5A; }" // Lighter gray on hover
+        "QComboBox { background-color: #4A4A4A; border: none; padding: 5px; color: #E8DAB2; }" // Earthy beige text
+        "QProgressBar { background-color: #4A4A4A; border: none; color: #D4A017; }"
+        "QProgressBar::chunk { background-color: #8B5A2B; }" // Earthy brown progress
+        "QLabel { color: #E8DAB2; }" // Beige text
+    );
 
-    // Input file
-    inputFileButton = new QPushButton("Select Input File");
-    inputFileLabel = new QLabel("No file selected");
-    fileInfoLabel = new QLabel("Type: N/A | Size: N/A");
-    QHBoxLayout *fileLayout = new QHBoxLayout();
-    fileLayout->addWidget(inputFileButton);
-    fileLayout->addWidget(inputFileLabel);
-    fileLayout->addWidget(fileInfoLabel);
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setSpacing(10);
+    layout->setContentsMargins(10, 10, 10, 10);
 
-    // Output format and location
-    outputFormatCombo = new QComboBox();
-    outputFormatCombo->setEditable(true);
-    outputFormatCombo->addItems({" .txt", ".zip", ".pdf", ".mp3", ".mp4"});
-    outputDirButton = new QPushButton("Select Output Directory");
-    compressionLevelCombo = new QComboBox();
-    compressionLevelCombo->addItems({"Low (1)", "Medium (2)", "High (3)"});
-    QHBoxLayout *outputLayout = new QHBoxLayout();
-    outputLayout->addWidget(new QLabel("Output Format:"));
-    outputLayout->addWidget(outputFormatCombo);
-    outputLayout->addWidget(outputDirButton);
-    outputLayout->addWidget(new QLabel("Compression:"));
-    outputLayout->addWidget(compressionLevelCombo);
+    // Input and format row
+    QHBoxLayout *topLayout = new QHBoxLayout();
+    inputButton = new QPushButton("Select File");
+    formatCombo = new QComboBox();
+    formatCombo->setEditable(true);
+    formatCombo->addItems({" .txt", ".zip", ".tar.gz", ".mp3", ".mp4"});
+    topLayout->addWidget(inputButton);
+    topLayout->addWidget(formatCombo);
 
-    // Convert and status
-    convertButton = new QPushButton("Convert");
-    statusLabel = new QLabel("Status: Idle");
+    // Progress and status
+    progressBar = new QProgressBar();
+    progressBar->setTextVisible(false);
+    statusLabel = new QLabel("Idle");
+
+    // Buttons
     QHBoxLayout *buttonLayout = new QHBoxLayout();
+    convertButton = new QPushButton("Convert");
+    cancelButton = new QPushButton("Cancel");
+    cancelButton->setEnabled(false);
+    buttonLayout->addStretch();
     buttonLayout->addWidget(convertButton);
-    buttonLayout->addWidget(statusLabel);
+    buttonLayout->addWidget(cancelButton);
+    buttonLayout->addStretch();
 
-    mainLayout->addLayout(fileLayout);
-    mainLayout->addLayout(outputLayout);
-    mainLayout->addLayout(buttonLayout);
+    layout->addLayout(topLayout);
+    layout->addWidget(progressBar);
+    layout->addWidget(statusLabel, 0, Qt::AlignCenter);
+    layout->addLayout(buttonLayout);
 
-    connect(inputFileButton, &QPushButton::clicked, this, &FileForgeWindow::selectInputFile);
-    connect(outputDirButton, &QPushButton::clicked, this, &FileForgeWindow::selectOutputDir);
+    connect(inputButton, &QPushButton::clicked, this, &FileForgeWindow::selectInputFile);
     connect(convertButton, &QPushButton::clicked, this, &FileForgeWindow::startConversion);
+    connect(cancelButton, &QPushButton::clicked, this, &FileForgeWindow::cancelConversion);
 }
 
 void FileForgeWindow::selectInputFile() {
-    inputFilePath = QFileDialog::getOpenFileName(this, "Select Input File");
+    inputFilePath = QFileDialog::getOpenFileName(this, "Select File");
     if (!inputFilePath.isEmpty()) {
-        inputFileLabel->setText(QFileInfo(inputFilePath).fileName());
-        uint64_t size = fs::file_size(inputFilePath.toStdString());
-        QString type = QFileInfo(inputFilePath).suffix().isEmpty() ? "Unknown" : "." + QFileInfo(inputFilePath).suffix();
-        fileInfoLabel->setText(QString("Type: %1 | Size: %2 bytes").arg(type).arg(size));
-    }
-}
-
-void FileForgeWindow::selectOutputDir() {
-    outputDirPath = QFileDialog::getExistingDirectory(this, "Select Output Directory");
-    if (!outputDirPath.isEmpty()) {
-        outputDirButton->setText("Output: " + QDir(outputDirPath).dirName());
+        outputDirPath = QFileInfo(inputFilePath).absolutePath();
+        statusLabel->setText(QFileInfo(inputFilePath).fileName());
     }
 }
 
 void FileForgeWindow::startConversion() {
-    if (inputFilePath.isEmpty() || outputDirPath.isEmpty() || outputFormatCombo->currentText().isEmpty()) {
-        QMessageBox::warning(this, "Error", "Please fill all fields.");
+    if (inputFilePath.isEmpty() || formatCombo->currentText().isEmpty()) {
+        QMessageBox::warning(this, "Error", "Select a file and format.");
         return;
     }
 
-    QString outputFile = outputDirPath + "/output" + outputFormatCombo->currentText().trimmed();
-    int compressionLevel = compressionLevelCombo->currentIndex() + 1;
-
-    statusLabel->setText("Status: Processing...");
+    QString outputFile = outputDirPath + "/output" + formatCombo->currentText().trimmed();
+    statusLabel->setText("Processing...");
+    progressBar->setValue(0);
     convertButton->setEnabled(false);
+    cancelButton->setEnabled(true);
 
     if (conversionThread) delete conversionThread;
     conversionThread = new ConversionThread(inputFilePath.toStdString(), outputFile.toStdString(),
-                                            outputFormatCombo->currentText().trimmed().toStdString(), compressionLevel, this);
+                                            formatCombo->currentText().trimmed().toStdString(), 2, this); // Medium compression
     connect(conversionThread, &ConversionThread::conversionFinished, this, &FileForgeWindow::onConversionFinished);
+    connect(conversionThread, &ConversionThread::progressUpdated, this, &FileForgeWindow::onProgressUpdated);
     conversionThread->start();
 }
 
-void FileForgeWindow::onConversionFinished(bool success, uint64_t newSize) {
+void FileForgeWindow::cancelConversion() {
+    if (conversionThread) {
+        conversionThread->cancel();
+        statusLabel->setText("Cancelled");
+        progressBar->setValue(0);
+        convertButton->setEnabled(true);
+        cancelButton->setEnabled(false);
+    }
+}
+
+void FileForgeWindow::onConversionFinished(bool success, uint64_t newSize, const QString& errorMsg) {
     if (success) {
-        statusLabel->setText(QString("Status: Done! New Size: %1 bytes").arg(newSize));
+        statusLabel->setText(QString("Done: %1 bytes").arg(newSize));
     } else {
-        statusLabel->setText("Status: Conversion failed.");
+        statusLabel->setText("Failed");
+        QMessageBox::critical(this, "Error", errorMsg);
     }
     convertButton->setEnabled(true);
+    cancelButton->setEnabled(false);
+}
+
+void FileForgeWindow::onProgressUpdated(int value) {
+    progressBar->setValue(value);
 }

@@ -12,5 +12,4 @@ HEADERS += include/FileForgeWindow.hpp \
            include/ConversionThread.hpp
 
 INCLUDEPATH += include
-LIBS += -larchive  # For libarchive
-# Add -lavcodec -lavformat -lavutil for ffmpeg if installed
+LIBS += -larchive -lavcodec -lavformat -lavutil
